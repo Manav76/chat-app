@@ -7,6 +7,7 @@ from app.database import create_db_and_tables, get_db
 from app.models.user import User
 from app.models.chat_session import ChatSession
 from app.models.chat_message import ChatMessage
+from app.api import user_routes
 import uvicorn
 import os
 import time

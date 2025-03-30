@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.schemas.user import UserCreate, UserOut , UserLogin
+from app.schemas.user import UserCreate, UserLogin , UserResponse
 from app.crud import user as crud_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-@router.post("/register", response_model=UserOut)
+@router.post("/register", response_model=UserResponse)
 def register(user: UserCreate, db: Session = Depends(get_db)):
     existing = crud_user.get_user_by_email(db, user.email)
     if existing:
@@ -16,7 +16,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
         )
     return crud_user.create_user(db, user)
 
-@router.post("/login", response_model=UserOut)
+@router.post("/login", response_model=UserResponse)
 def login(user_in: UserLogin, db: Session = Depends(get_db)):
     user = crud_user.authenticate_user(db, user_in.email, user_in.password)
     if not user:

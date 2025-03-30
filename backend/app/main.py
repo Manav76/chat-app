@@ -61,6 +61,8 @@ def on_startup():
 def read_root():
     return {"message": "Welcome to the Chat API"}
 
+app.include_router(user_routes.router)
+
 # Example endpoint to test database
 @app.get("/users/")
 def get_users(db: Session = Depends(get_db)):

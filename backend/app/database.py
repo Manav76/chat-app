@@ -20,11 +20,11 @@ DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB
 # Create engine with connection pool settings for production
 engine = create_engine(
     DATABASE_URL,
-    echo=False,  # Set to False in production
-    pool_pre_ping=True,  # Verify connections before using them
-    pool_recycle=3600,  # Recycle connections after 1 hour
-    pool_size=5,  # Number of connections to keep open
-    max_overflow=10  # Allow up to 10 additional connections
+    # echo=False,  # Set to False in production
+    # pool_pre_ping=True,  # Verify connections before using them
+    # pool_recycle=3600,  # Recycle connections after 1 hour
+    # pool_size=5,  # Number of connections to keep open
+    # max_overflow=10  # Allow up to 10 additional connections
 )
 
 # Create session factory

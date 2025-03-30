@@ -1,0 +1,15 @@
+fastapi==0.88.0
+uvicorn[standard]==0.20.0  # Standard includes additional production features
+sqlalchemy==1.4.41  # Using 1.4 for compatibility
+pydantic==1.10.8
+python-jose==3.3.0
+passlib==1.7.4
+bcrypt==4.0.1
+python-multipart==0.0.6
+python-dotenv==1.0.0
+email-validator==2.0.0
+pymysql==1.1.0  # MySQL driver
+gunicorn==20.1.0  # Production WSGI server
+alembic==1.10.3  # For database migrations
+
+

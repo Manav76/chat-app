@@ -1,0 +1,32 @@
+.chat-header {
+  padding: 16px;
+  background-color: white;
+  border-bottom: 1px solid #e1e5ea;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-title {
+  font-weight: 600;
+  font-size: 18px;
+  margin: 0;
+}
+
+.chat-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.chat-action-button {
+  background: none;
+  border: 1px solid #e1e5ea;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.chat-action-button:hover {
+  background-color: #f5f7fb;
+} 

@@ -88,4 +88,13 @@
 
 .auth-link a:hover {
   text-decoration: underline;
+}
+
+.direct-login-button {
+  margin-top: 10px;
+  background-color: #f39c12; /* Different color to distinguish it */
+}
+
+.direct-login-button:hover {
+  background-color: #e67e22;
 } 

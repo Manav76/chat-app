@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './Auth.css';
 
 const RegisterPage = () => {
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -16,32 +18,31 @@ const RegisterPage = () => {
     e.preventDefault();
     setError('');
     
+    // Validate passwords match
     if (password !== confirmPassword) {
-      return setError('Passwords do not match');
+      setError('Passwords do not match');
+      return;
     }
     
-    setLoading(true);
+    setIsLoading(true);
     
     try {
-      const success = await register(email, password);
-      if (success) {
-        navigate('/auth/login');
-      } else {
-        setError('Failed to create an account');
-      }
-    } catch (error) {
-      setError('An error occurred during registration');
-      console.error(error);
+      await register(email, username, password);
+      navigate('/chat');
+    } catch (err) {
+      setError(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (
     <div className="auth-container">
       <div className="auth-card">
         <h2>Register</h2>
+        
         {error && <div className="auth-error">{error}</div>}
+        
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="email">Email</label>
@@ -53,6 +54,18 @@ const RegisterPage = () => {
               required
             />
           </div>
+          
+          <div className="form-group">
+            <label htmlFor="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+          </div>
+          
           <div className="form-group">
             <label htmlFor="password">Password</label>
             <input
@@ -63,6 +76,7 @@ const RegisterPage = () => {
               required
             />
           </div>
+          
           <div className="form-group">
             <label htmlFor="confirmPassword">Confirm Password</label>
             <input
@@ -73,13 +87,19 @@ const RegisterPage = () => {
               required
             />
           </div>
-          <button type="submit" className="auth-button" disabled={loading}>
-            {loading ? 'Registering...' : 'Register'}
+          
+          <button 
+            type="submit" 
+            className="auth-button"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Registering...' : 'Register'}
           </button>
         </form>
-        <p className="auth-link">
+        
+        <div className="auth-link">
           Already have an account? <Link to="/auth/login">Login</Link>
-        </p>
+        </div>
       </div>
     </div>
   );

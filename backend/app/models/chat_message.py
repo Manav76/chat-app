@@ -14,9 +14,8 @@ class ChatMessage(Base):
     session_id = Column(String, ForeignKey("chat_sessions.id"), nullable=False)
     role = Column(String, nullable=False)  # 'user' or 'assistant'
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)  # Use created_at consistently
-    
-    # For compatibility with the rest of the code
+    created_at = Column(DateTime, default=datetime.utcnow) 
+
     @property
     def created_on(self):
         return self.created_at

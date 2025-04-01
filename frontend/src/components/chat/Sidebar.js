@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { FaPlus, FaTrash, FaEdit, FaComments } from 'react-icons/fa';
 import './Sidebar.css';
 
 const Sidebar = ({ 
@@ -12,54 +13,57 @@ const Sidebar = ({
 }) => {
   const { user, logout } = useAuth();
   
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
-  };
+
 
   return (
-    <div className="sidebar">
+    <div className="chat-sidebar">
       <div className="sidebar-header">
-        <h2>Chat Sessions</h2>
+        <h2><FaComments style={{ marginRight: '8px', color: '#e53e3e' }} /> Conversations</h2>
         <button 
-          className="new-chat-button"
+          className="new-chat-button" 
           onClick={onNewSession}
+          disabled={isLoading}
         >
-          New Chat
+          <FaPlus style={{ marginRight: '6px' }} /> New
         </button>
       </div>
       
       <div className="sessions-list">
-        {isLoading && !sessions.length ? (
-          <div className="loading-sessions">
-            <div className="loading-spinner"></div>
-            <p>Loading sessions...</p>
-          </div>
+        {isLoading ? (
+          <div className="loading-indicator">Loading sessions...</div>
         ) : sessions.length === 0 ? (
-          <div className="no-sessions">
-            <p>No chat sessions yet.</p>
-            <p>Start a new chat to begin!</p>
+          <div style={{ padding: '20px', textAlign: 'center', color: '#a0a0a0' }}>
+            No conversations yet
           </div>
         ) : (
-          sessions.map(session => (
+          sessions.map((session) => (
             <div 
-              key={session.id}
-              className={`session-item ${currentSession && currentSession.id === session.id ? 'active' : ''}`}
+              key={session.id} 
+              className={`session-item ${currentSession?.id === session.id ? 'active' : ''}`}
               onClick={() => onSessionSelect(session)}
             >
-              <div className="session-info">
-                <div className="session-title">{session.title}</div>
-                <div className="session-date">{formatDate(session.created_at)}</div>
+              <div className="session-title">{session.title}</div>
+              <div className="session-actions">
+                <button 
+                  className="session-action-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Implement edit functionality
+                    alert('Edit functionality to be implemented');
+                  }}
+                >
+                  <FaEdit />
+                </button>
+                <button 
+                  className="session-action-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteSession(session.id);
+                  }}
+                >
+                  <FaTrash />
+                </button>
               </div>
-              <button 
-                className="delete-session-button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteSession(session.id);
-                }}
-              >
-                ×
-              </button>
             </div>
           ))
         )}

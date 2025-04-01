@@ -1,37 +1,85 @@
 import React, { useEffect, useRef } from 'react';
-import Message from './Message';
+import { formatDistanceToNow } from 'date-fns';
+import ReactMarkdown from 'react-markdown';
+import {FaRobot } from 'react-icons/fa';
 import './ChatWindow.css';
 
 const ChatWindow = ({ messages, streamingMessage, currentSession, isLoading }) => {
   const messagesEndRef = useRef(null);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingMessage]);
 
+  const formatTime = (timestamp) => {
+    try {
+      return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
+    } catch (error) {
+      return '';
+    }
+  };
+
+  if (!currentSession) {
+    return (
+      <div className="chat-window">
+        <div className="empty-chat">
+          <FaRobot size={48} color="#e53e3e" />
+          <h3>Welcome to the AI Chat</h3>
+          <p>
+            Start a new conversation or select an existing one from the sidebar to begin chatting.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+
+  if (isLoading && messages.length === 0 && !streamingMessage) {
+    return (
+      <div className="chat-window">
+        <div className="loading-indicator">
+          Loading messages...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="chat-window">
-      {!currentSession && !isLoading && (
-        <div className="empty-chat">
-          <h2>Welcome to the Chat App</h2>
-          <p>Select a chat from the sidebar or start a new conversation.</p>
+      {messages.map((message) => (
+        <div 
+          key={message.id} 
+          className={`message-container ${message.role === 'user' ? 'user-message' : 'assistant-message'}`}
+        >
+          <div className="message-bubble">
+            <div className="message-content">
+              <ReactMarkdown>{message.content}</ReactMarkdown>
+            </div>
+          </div>
+          <div className="message-meta">
+            {message.role === 'user' ? 'You' : 'AI Assistant'}
+            <span className="message-time">{formatTime(message.created_at)}</span>
+          </div>
         </div>
-      )}
-      
-      {isLoading && !messages.length && (
-        <div className="loading-messages">
-          <div className="loading-spinner"></div>
-          <p>Loading messages...</p>
-        </div>
-      )}
-      
-      {messages.map(message => (
-        <Message key={message.id} message={message} />
       ))}
       
+      {/* Streaming message */}
       {streamingMessage && (
-        <Message key={streamingMessage.id} message={streamingMessage} isStreaming={true} />
+        <div className="message-container assistant-message">
+          <div className="message-bubble">
+            <div className="message-content">
+              <ReactMarkdown>{streamingMessage.content || ''}</ReactMarkdown>
+            </div>
+          </div>
+          <div className="message-meta">
+            AI Assistant
+            <div className="typing-indicator">
+              <div className="typing-dot"></div>
+              <div className="typing-dot"></div>
+              <div className="typing-dot"></div>
+            </div>
+          </div>
+        </div>
       )}
       
       <div ref={messagesEndRef} />

@@ -5,10 +5,10 @@ from typing import List
 import uuid
 from datetime import datetime
 
-def create_chat_message(db: Session, message_data: ChatMessageCreate, session_id: str) -> ChatMessage:
+def create_chat_message(db: Session, message_data: ChatMessageCreate, session_id: str, message_id: str = None) -> ChatMessage:
     """Create a new chat message."""
     db_message = ChatMessage(
-        id=str(uuid.uuid4()),
+        id=message_id or str(uuid.uuid4()),
         content=message_data.content,
         role=message_data.role,
         session_id=session_id,

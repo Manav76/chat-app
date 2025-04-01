@@ -7,7 +7,9 @@ from app.database import create_db_and_tables, get_db
 from app.models.user import User
 from app.models.chat_session import ChatSession
 from app.models.chat_message import ChatMessage
-from app.api import user_routes
+from app.api import user_routes, auth_routes, chat_routes
+from app.services.auth import SECRET_KEY
+from app.migrations.update_schema import run_migrations
 import uvicorn
 import os
 import time
@@ -29,10 +31,7 @@ app = FastAPI(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://yourdomain.com",  # Production domain
-        "http://localhost:3000",   # Development domain
-    ],
+    allow_origins=["http://localhost:3000"],  # Your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,13 +54,27 @@ async def log_requests(request: Request, call_next):
 @app.on_event("startup")
 def on_startup():
     logger.info("Starting application")
+    
+    # Check if SECRET_KEY is properly set
+    if not SECRET_KEY:
+        logger.error("SECRET_KEY is not set in environment variables!")
+    else:
+        logger.info(f"SECRET_KEY is set: {SECRET_KEY[:5]}...")
+    
+    # Create tables and run migrations
     create_db_and_tables()
+    try:
+        run_migrations()
+    except Exception as e:
+        logger.error(f"Error running migrations: {e}")
 
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the Chat API"}
 
 app.include_router(user_routes.router)
+app.include_router(auth_routes.router)
+app.include_router(chat_routes.router)
 
 # Example endpoint to test database
 @app.get("/users/")

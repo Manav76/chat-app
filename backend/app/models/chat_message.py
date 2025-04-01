@@ -10,11 +10,16 @@ def generate_uuid():
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
     
-    id = Column(String(36), primary_key=True, default=generate_uuid)
-    session_id = Column(String(36), ForeignKey("chat_sessions.id"), nullable=False)
-    role = Column(String(50), nullable=False)  # 'user' or 'assistant'
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    session_id = Column(String, ForeignKey("chat_sessions.id"), nullable=False)
+    role = Column(String, nullable=False)  # 'user' or 'assistant'
     content = Column(Text, nullable=False)
-    timestamp = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=datetime.utcnow)  # Use created_at consistently
+    
+    # For compatibility with the rest of the code
+    @property
+    def created_on(self):
+        return self.created_at
     
     # Relationship
     session = relationship("ChatSession", back_populates="messages") 

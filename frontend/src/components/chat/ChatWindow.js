@@ -1,43 +1,39 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
+import Message from './Message';
+import './ChatWindow.css';
 
-const ChatWindow = ({ messages, currentSession }) => {
+const ChatWindow = ({ messages, streamingMessage, currentSession, isLoading }) => {
   const messagesEndRef = useRef(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
+  // Scroll to bottom when messages change
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  if (!currentSession) {
-    return (
-      <div className="chat-window empty-chat">
-        <div className="welcome-message">
-          <h3>Welcome to the Chat App</h3>
-          <p>Select an existing chat or start a new conversation</p>
-        </div>
-      </div>
-    );
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, streamingMessage]);
 
   return (
     <div className="chat-window">
-      {messages.length === 0 ? (
+      {!currentSession && !isLoading && (
         <div className="empty-chat">
-          <p>No messages yet. Start the conversation!</p>
+          <h2>Welcome to the Chat App</h2>
+          <p>Select a chat from the sidebar or start a new conversation.</p>
         </div>
-      ) : (
-        messages.map(message => (
-          <div 
-            key={message.id} 
-            className={`message ${message.role === 'user' ? 'user-message' : 'assistant-message'}`}
-          >
-            <div className="message-content">{message.content}</div>
-          </div>
-        ))
       )}
+      
+      {isLoading && !messages.length && (
+        <div className="loading-messages">
+          <div className="loading-spinner"></div>
+          <p>Loading messages...</p>
+        </div>
+      )}
+      
+      {messages.map(message => (
+        <Message key={message.id} message={message} />
+      ))}
+      
+      {streamingMessage && (
+        <Message key={streamingMessage.id} message={streamingMessage} isStreaming={true} />
+      )}
+      
       <div ref={messagesEndRef} />
     </div>
   );

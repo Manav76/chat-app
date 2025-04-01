@@ -40,9 +40,7 @@ def delete_chat_session(db: Session, session_id: str, user_id: str) -> bool:
     """Delete a chat session."""
     db_session = get_chat_session(db, session_id, user_id)
     if db_session:
-        # Delete all messages in the session first
         db.query(ChatMessage).filter(ChatMessage.session_id == session_id).delete()
-        # Then delete the session
         db.delete(db_session)
         db.commit()
         return True

@@ -1,25 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Sidebar from './Sidebar';
-import ChatHeader from './ChatHeader';
-import ChatWindow from './ChatWindow';
-import MessageInput from './MessageInput';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import Sidebar from './Sidebar';
+import ChatWindow from './ChatWindow';
+import ChatHeader from './ChatHeader';
+import MessageInput from './MessageInput';
 import './Chat.css';
 
-const ChatLayout = () => {
+const Chat = () => {
+  const { getAuthHeader} = useAuth();
   const [sessions, setSessions] = useState([]);
   const [currentSession, setCurrentSession] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [streamingMessage, setStreamingMessage] = useState(null);
-  
-  const { getAuthHeader } = useAuth();
-  const eventSourceRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(false);
+
 
   useEffect(() => {
     const fetchSessions = async () => {
-      setIsLoading(true);
       try {
+        setIsLoading(true);
         const response = await fetch('http://localhost:8000/chat/sessions', {
           headers: getAuthHeader()
         });
@@ -38,23 +37,24 @@ const ChatLayout = () => {
         setIsLoading(false);
       }
     };
-
+    
     fetchSessions();
   }, [getAuthHeader, currentSession]);
 
+  
   useEffect(() => {
     const fetchMessages = async () => {
       if (!currentSession) return;
       
-      setIsLoading(true);
       try {
-        const response = await fetch(`http://localhost:8000/chat/sessions/${currentSession.id}`, {
+        setIsLoading(true);
+        const response = await fetch(`http://localhost:8000/chat/sessions/${currentSession.id}/messages`, {
           headers: getAuthHeader()
         });
         
         if (response.ok) {
           const data = await response.json();
-          setMessages(data.messages || []);
+          setMessages(data);
         }
       } catch (error) {
         console.error('Error fetching messages:', error);
@@ -62,7 +62,7 @@ const ChatLayout = () => {
         setIsLoading(false);
       }
     };
-
+    
     fetchMessages();
   }, [currentSession, getAuthHeader]);
 
@@ -70,18 +70,16 @@ const ChatLayout = () => {
     setCurrentSession(session);
   };
 
-  // Handle new session creation
   const handleNewSession = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch('http://localhost:8000/chat/sessions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...getAuthHeader()
         },
-        body: JSON.stringify({
-          title: 'New Chat'
-        })
+        body: JSON.stringify({ title: 'New Conversation' })
       });
       
       if (response.ok) {
@@ -92,19 +90,25 @@ const ChatLayout = () => {
       }
     } catch (error) {
       console.error('Error creating new session:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Handle session deletion
   const handleDeleteSession = async (sessionId) => {
+    if (!window.confirm('Are you sure you want to delete this conversation?')) {
+      return;
+    }
+    
     try {
+      setIsLoading(true);
       const response = await fetch(`http://localhost:8000/chat/sessions/${sessionId}`, {
         method: 'DELETE',
         headers: getAuthHeader()
       });
       
       if (response.ok) {
-        const updatedSessions = sessions.filter(session => session.id !== sessionId);
+        const updatedSessions = sessions.filter(s => s.id !== sessionId);
         setSessions(updatedSessions);
         if (currentSession && currentSession.id === sessionId) {
           setCurrentSession(updatedSessions.length > 0 ? updatedSessions[0] : null);
@@ -113,35 +117,55 @@ const ChatLayout = () => {
       }
     } catch (error) {
       console.error('Error deleting session:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-
   const handleSendMessage = async (content) => {
-    if (!content.trim()) return;
+    if (!currentSession) {
+      try {
+        const response = await fetch('http://localhost:8000/chat/sessions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...getAuthHeader()
+          },
+          body: JSON.stringify({ title: content.substring(0, 30) + (content.length > 30 ? '...' : '') })
+        });
+        
+        if (response.ok) {
+          const newSession = await response.json();
+          setSessions([newSession, ...sessions]);
+          setCurrentSession(newSession);
+        } else {
+          throw new Error('Failed to create session');
+        }
+      } catch (error) {
+        console.error('Error creating session:', error);
+        return;
+      }
+    }
+
     const userMessage = {
-      id: `temp-${Date.now()}`,
+      id: 'temp-' + Date.now(),
       content,
       role: 'user',
       created_at: new Date().toISOString()
     };
     
     setMessages(prev => [...prev, userMessage]);
-    const streamingMessageId = `streaming-${Date.now()}`;
+    
     setStreamingMessage({
-      id: streamingMessageId,
+      id: 'streaming-' + Date.now(),
       content: '',
-      role: 'assistant',
-      created_at: new Date().toISOString()
+      role: 'assistant'
     });
     
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-    }
+    let finalMessageContent = '';
+    let finalMessageId = null;
     
     try {
-      console.log('Starting streaming request...');
-      // Start streaming response
       const response = await fetch('http://localhost:8000/chat/stream', {
         method: 'POST',
         headers: {
@@ -150,70 +174,45 @@ const ChatLayout = () => {
         },
         body: JSON.stringify({
           message: content,
-          session_id: currentSession ? currentSession.id : null
+          session_id: currentSession?.id
         })
       });
       
       if (!response.ok) {
-        console.error('Stream response not OK:', response.status);
-        throw new Error('Failed to send message');
+        const errorText = await response.text();
+        console.error(`Server error: ${response.status}`, errorText);
+        throw new Error(`Server responded with ${response.status}: ${errorText}`);
       }
       
-      console.log('Stream response OK, starting reader...');
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       
-      let sessionId = null;
-      let messageId = null;
-      
       while (true) {
-        const { done, value } = await reader.read();
-        
-        if (done) {
-          console.log('Stream complete');
-          break;
-        }
+        const { value, done } = await reader.read();
+        if (done) break;
         
         const chunk = decoder.decode(value);
-        console.log('Received chunk:', chunk);
         const lines = chunk.split('\n').filter(line => line.trim());
         
         for (const line of lines) {
           try {
             const data = JSON.parse(line);
-            console.log('Parsed data:', data);
             
-            if (data.type === 'session_id') {
-              sessionId = data.session_id;
-              console.log('Received session ID:', sessionId);
-
-              if (!currentSession) {
-                // Fetch the new session details
-                console.log('Fetching new session details...');
-                const sessionResponse = await fetch(`http://localhost:8000/chat/sessions/${sessionId}`, {
-                  headers: getAuthHeader()
-                });
-                
-                if (sessionResponse.ok) {
-                  const sessionData = await sessionResponse.json();
-                  console.log('Session data:', sessionData);
-                  setCurrentSession(sessionData);
-                  setSessions(prev => [sessionData, ...prev]);
-                } else {
-                  console.error('Failed to fetch session details:', sessionResponse.status);
-                }
-              }
-            } else if (data.type === 'content') {
-              setStreamingMessage(prev => ({
-                ...prev,
-                content: prev ? prev.content + data.content : data.content
-              }));
+            if (data.type === 'content') {
+              finalMessageContent += data.content;
+              setStreamingMessage(prev => {
+                if (!prev) return { id: 'streaming-' + Date.now(), content: data.content, role: 'assistant' };
+                return { ...prev, content: prev.content + data.content };
+              });
             } else if (data.type === 'message_id') {
-              messageId = data.message_id;
-              console.log('Received message ID:', messageId);
+              finalMessageId = data.message_id;
+              console.log("Received message ID:", finalMessageId);
             } else if (data.type === 'error') {
               console.error('Stream error:', data.error);
-              throw new Error(data.error);
+              setStreamingMessage(prev => {
+                if (!prev) return { id: 'streaming-' + Date.now(), content: 'Error: ' + data.error, role: 'assistant' };
+                return { ...prev, content: prev.content + '\n\nError: ' + data.error };
+              });
             }
           } catch (e) {
             console.error('Error parsing stream chunk:', e, line);
@@ -221,40 +220,57 @@ const ChatLayout = () => {
         }
       }
       
-      if (messageId) {
-        console.log('Updating message with final ID:', messageId);
-        setStreamingMessage(null);
-        
-        const messageResponse = await fetch(`http://localhost:8000/chat/sessions/${sessionId}`, {
-          headers: getAuthHeader()
-        });
-        
-        if (messageResponse.ok) {
-          const sessionData = await messageResponse.json();
-          console.log('Final session data:', sessionData);
-          setMessages(sessionData.messages || []);
-        } else {
-          console.error('Failed to fetch final messages:', messageResponse.status);
-        }
+      console.log("Stream complete. Adding final message with ID:", finalMessageId);
+      
+      if (finalMessageId) {
+        setTimeout(() => {
+          setMessages(prev => {
+            const messageExists = prev.some(msg => msg.id === finalMessageId);
+            if (messageExists) {
+              console.log("Message already exists in state, not adding again");
+              return prev;
+            }
+            
+            console.log("Adding message to state:", finalMessageId);
+            return [
+              ...prev,
+              {
+                id: finalMessageId,
+                content: finalMessageContent,
+                role: 'assistant',
+                created_at: new Date().toISOString()
+              }
+            ];
+          });
+          setStreamingMessage(null);
+        }, 100);
+      } else {
+        console.error("Missing messageId after streaming completed");
       }
     } catch (error) {
-      console.error('Error sending message:', error);
-      setStreamingMessage(null);
-      setMessages(prev => [
+      console.error('Error streaming response:', error);
+      setStreamingMessage(prev => ({
         ...prev,
-        {
-          id: `error-${Date.now()}`,
-          content: `Error: ${error.message || 'Failed to get a response. Please try again.'}`,
-          role: 'assistant',
-          created_at: new Date().toISOString()
-        }
-      ]);
+        content: `Error: ${error.message || 'Failed to get response from server'}`
+      }));
+      setTimeout(() => {
+        setMessages(prev => [
+          ...prev,
+          {
+            id: 'error-' + Date.now(),
+            content: `Error: ${error.message || 'Failed to get response from server'}`,
+            role: 'assistant',
+            created_at: new Date().toISOString()
+          }
+        ]);
+        setStreamingMessage(null);
+      }, 2000);
     }
   };
 
   return (
     <div className="chat-layout">
-      <Sidebar 
+      <Sidebar
         sessions={sessions}
         currentSession={currentSession}
         onSessionSelect={handleSessionSelect}
@@ -262,20 +278,21 @@ const ChatLayout = () => {
         onDeleteSession={handleDeleteSession}
         isLoading={isLoading}
       />
+      
       <div className="chat-main">
-        <ChatHeader 
-          currentSession={currentSession} 
-        />
-        <ChatWindow 
-          messages={messages} 
+        <ChatHeader currentSession={currentSession} />
+        
+        <ChatWindow
+          messages={messages}
           streamingMessage={streamingMessage}
           currentSession={currentSession}
           isLoading={isLoading}
         />
+        
         <MessageInput onSendMessage={handleSendMessage} />
       </div>
     </div>
   );
 };
 
-export default ChatLayout; 
+export default Chat; 

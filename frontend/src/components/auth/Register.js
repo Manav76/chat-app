@@ -1,18 +1,17 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './Auth.css';
 
-const RegisterPage = () => {
-  const [email, setEmail] = useState('');
+const Register = () => {
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  const { register } = useAuth();
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { register } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,16 +20,16 @@ const RegisterPage = () => {
       setError('Passwords do not match');
       return;
     }
-    
-    setIsLoading(true);
-    
+
+    setLoading(true);
+
     try {
-      await register(email, username, password);
+      await register(username, email, password);
       navigate('/chat');
     } catch (err) {
-      setError(err.message || 'Registration failed. Please try again.');
+      setError(err.message || 'Failed to register. Please try again.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -38,21 +37,8 @@ const RegisterPage = () => {
     <div className="auth-container">
       <div className="auth-card">
         <h2>Register</h2>
-        
         {error && <div className="auth-error">{error}</div>}
-        
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          
+        <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label htmlFor="username">Username</label>
             <input
@@ -63,7 +49,16 @@ const RegisterPage = () => {
               required
             />
           </div>
-          
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <input
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
           <div className="form-group">
             <label htmlFor="password">Password</label>
             <input
@@ -74,7 +69,6 @@ const RegisterPage = () => {
               required
             />
           </div>
-          
           <div className="form-group">
             <label htmlFor="confirmPassword">Confirm Password</label>
             <input
@@ -85,17 +79,15 @@ const RegisterPage = () => {
               required
             />
           </div>
-          
           <button 
             type="submit" 
-            className="auth-button"
-            disabled={isLoading}
+            className="auth-button" 
+            disabled={loading}
           >
-            {isLoading ? 'Registering...' : 'Register'}
+            {loading ? 'Registering...' : 'Register'}
           </button>
         </form>
-        
-        <div className="auth-link">
+        <div className="auth-footer">
           Already have an account? <Link to="/auth/login">Login</Link>
         </div>
       </div>
@@ -103,4 +95,4 @@ const RegisterPage = () => {
   );
 };
 
-export default RegisterPage; 
+export default Register; 

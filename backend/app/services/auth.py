@@ -7,12 +7,16 @@ from app.models.user import User
 from app.schemas.user import UserCreate
 import os
 from dotenv import load_dotenv
+import logging
 
-# Load environment variables
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 
 # JWT settings
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -27,7 +31,7 @@ def get_password_hash(password):
     """Generate a password hash."""
     return pwd_context.hash(password)
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+async def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Create a JWT access token."""
     to_encode = data.copy()
     
@@ -38,26 +42,22 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     
     to_encode.update({"exp": expire})
     
-    # Ensure SECRET_KEY is properly set
     if not SECRET_KEY:
-        print("ERROR: SECRET_KEY is not set")
-        raise ValueError("SECRET_KEY is not set in environment variables")
+        logger.error("SECRET_KEY is not set")
+        raise ValueError("SECRET_KEY is not set")
     
-    # Print for debugging (remove in production)
-    print(f"Creating token with payload: {to_encode}")
-    print(f"Using SECRET_KEY: {SECRET_KEY[:5]}...")
+    logger.info(f"Creating token with payload: {to_encode}")
     
     try:
-        # Ensure we're using the correct algorithm
+        # Encode the JWT
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-        print(f"Token generated successfully: {encoded_jwt[:20]}...")
+        logger.info(f"Token generated successfully: {encoded_jwt[:20]}...")
         return encoded_jwt
     except Exception as e:
-        print(f"Error encoding JWT: {e}")
-        # Re-raise the exception for proper error handling
+        logger.error(f"Error encoding JWT: {e}")
         raise
 
-def create_user(db: Session, user_create: UserCreate):
+async def create_user(db: Session, user_create: UserCreate):
     """Create a new user with hashed password."""
     hashed_password = get_password_hash(user_create.password)
     db_user = User(
@@ -81,7 +81,7 @@ def authenticate_user(db: Session, email: str, password: str):
     
     return user
 
-def get_user_by_email(db: Session, email: str):
+async def get_user_by_email(db: Session, email: str):
     """Get a user by email."""
     return db.query(User).filter(User.email == email).first()
 

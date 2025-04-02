@@ -1,5 +1,4 @@
 import React, { useEffect, useRef } from 'react';
-import { formatDistanceToNow } from 'date-fns';
 import ReactMarkdown from 'react-markdown';
 import {FaRobot } from 'react-icons/fa';
 import './ChatWindow.css';
@@ -13,8 +12,20 @@ const ChatWindow = ({ messages, streamingMessage, currentSession, isLoading }) =
 
   const formatTime = (timestamp) => {
     try {
-      return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
+      const date = new Date(timestamp);
+      
+      // Format the date in IST timezone
+      return new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      }).format(date);
     } catch (error) {
+      console.error('Error formatting time:', error);
       return '';
     }
   };

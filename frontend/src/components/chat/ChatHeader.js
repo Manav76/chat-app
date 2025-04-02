@@ -1,5 +1,4 @@
 import React from 'react';
-import { format } from 'date-fns';
 import { FaRobot } from 'react-icons/fa';
 
 const ChatHeader = ({ currentSession }) => {
@@ -11,8 +10,25 @@ const ChatHeader = ({ currentSession }) => {
     );
   }
 
+  const formatDate = (timestamp) => {
+    try {
+      const date = new Date(timestamp);
+      
+      // Format the date in IST timezone
+      return new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      }).format(date);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
+  };
+
   const formattedDate = currentSession.created_at 
-    ? format(new Date(currentSession.created_at), 'MMM d, yyyy')
+    ? formatDate(currentSession.created_at)
     : '';
 
   return (
